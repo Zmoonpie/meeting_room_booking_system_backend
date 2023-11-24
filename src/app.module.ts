@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -19,12 +20,13 @@ import { UserModule } from './user/user.module';
       poolSize: 10,
       connectorPackage: 'mysql2',
       extra: {
-        authPlugin: 'sha256_password',
-      },
+        authPlugin: 'sha256_password'
+      }
     }),
     UserModule,
+    RedisModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService]
 })
 export class AppModule {}
