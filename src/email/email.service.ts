@@ -12,7 +12,7 @@ export class EmailService {
       secure: true,
       auth: {
         user: 'moonp1e@163.com',
-        pass: 'PMGCLSDIBJXJRHRX'
+        pass: ''
       }
     });
   }
