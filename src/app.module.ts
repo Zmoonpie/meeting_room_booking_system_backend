@@ -7,6 +7,9 @@ import { RedisModule } from './redis/redis.module';
 import { EmailModule } from './email/email.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
+import { LoginGuard } from './guard/login.guard';
+import { PermissionGuard } from './guard/permission.guard';
 
 @Module({
   imports: [
@@ -54,6 +57,16 @@ import { JwtModule } from '@nestjs/jwt';
     EmailModule
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: LoginGuard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard
+    }
+  ]
 })
 export class AppModule {}

@@ -1,4 +1,4 @@
-import { Controller, Body, Get, Post, Inject, Query } from '@nestjs/common';
+import { Controller, Body, Get, Post, Inject, Query, UnauthorizedException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { RedisService } from 'src/redis/redis.service';
@@ -76,5 +76,81 @@ export class UserController {
   }
 
   @Post('admin/login')
-  async adminLogin(@Body() loginDto: LoginUserDto) {}
+  async adminLogin(@Body() loginDto: LoginUserDto) {
+    const vo = await this.userService.login(loginDto, true);
+
+    vo.accessToken = this.jwtService.sign(
+      {
+        username: vo.userInfo.username,
+        userId: vo.userInfo.id,
+        roles: vo.userInfo.roles,
+        permissions: vo.userInfo.permissions
+      },
+      {
+        expiresIn: this.configService.get('jwt_access_token_expires_time')
+      }
+    );
+
+    vo.refreshToken = this.jwtService.sign(
+      {
+        userId: vo.userInfo.id
+      },
+      {
+        expiresIn: this.configService.get('jwt_refresh_token_expres_time')
+      }
+    );
+
+    return vo;
+  }
+
+  @Get('refresh')
+  async refresh(@Query('refreshToken') refreshToken: string) {
+    try {
+      const data = this.jwtService.verify(refreshToken);
+      const user = await this.userService.findUserById(data.userId, false);
+      const refresh = this.jwtService.sign(
+        {
+          username: user.username,
+          userId: user.id,
+          roles: user.roles,
+          permissions: user.permissions
+        },
+        {
+          expiresIn: this.configService.get('jwt_access_token_expires_time') || '30m'
+        }
+      );
+      return {
+        accessToken: refresh
+      };
+    } catch (error) {
+      throw new UnauthorizedException('refreshToken无效');
+    }
+  }
+
+  @Get('admin/refresh')
+  async adminRefresh(@Query('refreshToken') refreshToken: string) {
+    try {
+      const data = this.jwtService.verify(refreshToken);
+
+      const user = await this.userService.findUserById(data.userId, true);
+
+      const access_token = this.jwtService.sign(
+        {
+          userId: user.id,
+          username: user.username,
+          roles: user.roles,
+          permissions: user.permissions
+        },
+        {
+          expiresIn: this.configService.get('jwt_access_token_expires_time') || '30m'
+        }
+      );
+
+      return {
+        access_token
+      };
+    } catch (e) {
+      throw new UnauthorizedException('token 已失效，请重新登录');
+    }
+  }
 }
