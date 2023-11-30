@@ -9,6 +9,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { md5 } from 'src/utils';
 import { LoginUserDto } from './dto/login-user.dto';
 import { LoginUserVo } from './vo/login-user.vo';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger();
@@ -166,5 +167,40 @@ export class UserService {
         return arr;
       }, [])
     };
+  }
+
+  async findUserDetailById(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: {
+        id: userId
+      }
+    });
+    return user;
+  }
+
+  async updatePassword(userId: number, passwordDto: UpdateUserPasswordDto) {
+    const cache = await this.redisService.get(`update_password_captcha_` + passwordDto.email);
+
+    if (!cache) {
+      throw new HttpException('验证码已过期', HttpStatus.BAD_REQUEST);
+    }
+
+    if (passwordDto.captcha !== cache) {
+      throw new HttpException('验证码错误', HttpStatus.BAD_REQUEST);
+    }
+
+    const user = await this.userRepository.findOne({
+      where: {
+        id: userId
+      }
+    });
+
+    try {
+      user.password = md5(passwordDto.password);
+      await this.userRepository.save(user);
+      return '密码修改成功';
+    } catch (error) {
+      return error;
+    }
   }
 }
