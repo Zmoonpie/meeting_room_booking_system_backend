@@ -203,4 +203,25 @@ export class UserService {
       return error;
     }
   }
+
+  async freezeUser(userId: number) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+
+    if (!user) {
+      throw new HttpException('用户不存在', HttpStatus.BAD_REQUEST);
+    }
+
+    user.isFrozen = true;
+
+    await this.userRepository.save(user);
+  }
+
+  async findUserByCount(pageNo: number, pageSize: number) {
+    const skinCount = (pageNo - 1) * pageSize;
+    const [users, totalCount] = await this.userRepository.findAndCount({
+      skip: skinCount,
+      take: pageSize
+    });
+    return { users, totalCount };
+  }
 }

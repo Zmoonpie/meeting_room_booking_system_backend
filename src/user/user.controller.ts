@@ -1,4 +1,14 @@
-import { Controller, Body, Get, Post, Inject, Query, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Get,
+  Post,
+  Inject,
+  Query,
+  UnauthorizedException,
+  ParseIntPipe,
+  HttpStatus
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { RedisService } from 'src/redis/redis.service';
@@ -10,6 +20,9 @@ import { LoginUserVo } from './vo/login-user.vo';
 import { UserInfo, RequireLogin } from 'src/decorator/customer.decorator';
 import { UserDetailVo } from './vo/user-detail.vo';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
+import { ApiTags, ApiQuery, ApiResponse } from '@nestjs/swagger';
+
+@ApiTags('用户管理模块')
 @Controller('user')
 export class UserController {
   @Inject()
@@ -54,6 +67,18 @@ export class UserController {
     return await this.userService.register(registerUserDto);
   }
 
+  @ApiQuery({
+    name: 'address',
+    type: String,
+    description: '邮箱地址',
+    required: true,
+    example: 'xxx@xx.com'
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '发送成功',
+    type: String
+  })
   @Get('register-captcha')
   async registerCaptcha(@Query('email') email: string) {
     const code = Math.random().toString().slice(2, 8);
@@ -176,5 +201,18 @@ export class UserController {
     //   html: `<p>你的更改密码验证码是 ${code}</p>`
     // });
     return '发送成功';
+  }
+
+  @Get('freeze')
+  async freeze(@Query('userId') userId: number) {
+    await this.userService.freezeUser(userId);
+    return 'success';
+  }
+
+  @Get('list')
+  async list(@Query('pageNo', ParseIntPipe) pageNo: number, @Query('pageSize', ParseIntPipe) pageSize: number) {
+    const data = await this.userService.findUserByCount(pageNo, pageSize);
+
+    return data;
   }
 }
